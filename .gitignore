@@ -1,0 +1,55 @@
+node_modules
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+
+### Vaadin ###
+frontend/generated/
+frontend/index.html
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+types.d.ts
+vite.generated.ts
+
+### Environment / secrets ###
+.env
+.env.*
+*.local.properties
+application-local.properties
+
+### OS ###
+.DS_Store
+Thumbs.db
