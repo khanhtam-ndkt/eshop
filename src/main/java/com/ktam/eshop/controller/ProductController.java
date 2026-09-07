@@ -3,6 +3,7 @@ package com.ktam.eshop.controller;
 import com.ktam.eshop.api.ProductsApi;
 import com.ktam.eshop.model.Product;
 import com.ktam.eshop.entity.ProductEntity;
+import com.ktam.eshop.exception.ProductNotFoundException;
 import com.ktam.eshop.repository.ProductRepository;
 
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -40,31 +40,28 @@ public class ProductController implements ProductsApi {
 
     @Override
     public ResponseEntity<Product> getProduct(Long id) {
-        Optional<ProductEntity> entityOptional = repository.findById(id);
-        return entityOptional.map(entity -> ResponseEntity.ok(mapToApi(entity)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        ProductEntity entity = repository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        return ResponseEntity.ok(mapToApi(entity));
     }
 
     @Override
     public ResponseEntity<Void> updateProduct(Long id, Product product) {
-        Optional<ProductEntity> entityOptional = repository.findById(id);
-        if (entityOptional.isPresent()) {
-            ProductEntity entityToUpdate = entityOptional.get();
-            entityToUpdate.setName(product.getName());
-            entityToUpdate.setPrice(product.getPrice());
-            repository.save(entityToUpdate);
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+        ProductEntity entityToUpdate = repository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
+        entityToUpdate.setName(product.getName());
+        entityToUpdate.setPrice(product.getPrice());
+        repository.save(entityToUpdate);
+        return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<Void> deleteProduct(Long id) {
-        if (repository.existsById(id)) {
-            repository.deleteById(id);
-            return ResponseEntity.noContent().build();
+        if (!repository.existsById(id)) {
+            throw new ProductNotFoundException(id);
         }
-        return ResponseEntity.notFound().build();
+        repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Helper method to keep code clean
