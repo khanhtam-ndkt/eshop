@@ -53,3 +53,6 @@ application-local.properties
 ### OS ###
 .DS_Store
 Thumbs.db
+
+### stray files ###
+-s
