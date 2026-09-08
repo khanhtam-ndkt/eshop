@@ -2,8 +2,9 @@ package com.ktam.eshop.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ktam.eshop.entity.ProductEntity;
+import com.ktam.eshop.exception.ProductNotFoundException;
 import com.ktam.eshop.model.Product;
-import com.ktam.eshop.repository.ProductRepository;
+import com.ktam.eshop.service.ProductService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -12,11 +13,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -40,7 +41,7 @@ class ProductControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private ProductRepository repository;
+    private ProductService service;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -48,7 +49,7 @@ class ProductControllerTest {
     void getProducts_returnsListOfProducts() throws Exception {
         ProductEntity entity = new ProductEntity("Gaming Mouse", 59.99);
         entity.setId(1L);
-        when(repository.findAll()).thenReturn(List.of(entity));
+        when(service.findAll()).thenReturn(List.of(entity));
 
         mockMvc.perform(get("/products"))
                 .andExpect(status().isOk())
@@ -62,7 +63,7 @@ class ProductControllerTest {
     void getProduct_whenFound_returns200() throws Exception {
         ProductEntity entity = new ProductEntity("Keyboard", 89.0);
         entity.setId(1L);
-        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(service.findById(1L)).thenReturn(entity);
 
         mockMvc.perform(get("/products/1"))
                 .andExpect(status().isOk())
@@ -72,7 +73,7 @@ class ProductControllerTest {
 
     @Test
     void getProduct_whenMissing_returns404WithErrorBody() throws Exception {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(service.findById(99L)).thenThrow(new ProductNotFoundException(99L));
 
         mockMvc.perform(get("/products/99"))
                 .andExpect(status().isNotFound())
@@ -91,7 +92,7 @@ class ProductControllerTest {
                         .content(objectMapper.writeValueAsString(product)))
                 .andExpect(status().isCreated());
 
-        verify(repository, times(1)).save(any(ProductEntity.class));
+        verify(service, times(1)).create("Monitor", 199.99);
     }
 
     @Test
@@ -107,7 +108,7 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.fieldErrors[?(@.field == 'name')]").exists());
 
-        verify(repository, never()).save(any());
+        verify(service, never()).create(anyString(), anyDouble());
     }
 
     @Test
@@ -125,9 +126,9 @@ class ProductControllerTest {
 
     @Test
     void updateProduct_whenFound_returns200() throws Exception {
-        ProductEntity existing = new ProductEntity("Old Name", 10.0);
-        existing.setId(1L);
-        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        ProductEntity updated = new ProductEntity("New Name", 20.0);
+        updated.setId(1L);
+        when(service.update(eq(1L), anyString(), anyDouble())).thenReturn(updated);
 
         Product update = new Product();
         update.setName("New Name");
@@ -138,12 +139,13 @@ class ProductControllerTest {
                         .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk());
 
-        verify(repository, times(1)).save(any(ProductEntity.class));
+        verify(service, times(1)).update(1L, "New Name", 20.0);
     }
 
     @Test
     void updateProduct_whenMissing_returns404() throws Exception {
-        when(repository.findById(99L)).thenReturn(Optional.empty());
+        when(service.update(eq(99L), anyString(), anyDouble()))
+                .thenThrow(new ProductNotFoundException(99L));
 
         Product update = new Product();
         update.setName("Doesn't matter");
@@ -153,27 +155,21 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isNotFound());
-
-        verify(repository, never()).save(any());
     }
 
     @Test
     void deleteProduct_whenFound_returns204() throws Exception {
-        when(repository.existsById(1L)).thenReturn(true);
-
         mockMvc.perform(delete("/products/1"))
                 .andExpect(status().isNoContent());
 
-        verify(repository, times(1)).deleteById(1L);
+        verify(service, times(1)).delete(1L);
     }
 
     @Test
     void deleteProduct_whenMissing_returns404() throws Exception {
-        when(repository.existsById(99L)).thenReturn(false);
+        doThrow(new ProductNotFoundException(99L)).when(service).delete(99L);
 
         mockMvc.perform(delete("/products/99"))
                 .andExpect(status().isNotFound());
-
-        verify(repository, never()).deleteById(anyLong());
     }
 }

@@ -3,8 +3,7 @@ package com.ktam.eshop.controller;
 import com.ktam.eshop.api.ProductsApi;
 import com.ktam.eshop.model.Product;
 import com.ktam.eshop.entity.ProductEntity;
-import com.ktam.eshop.exception.ProductNotFoundException;
-import com.ktam.eshop.repository.ProductRepository;
+import com.ktam.eshop.service.ProductService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,51 +15,40 @@ import java.util.stream.Collectors;
 @RestController
 public class ProductController implements ProductsApi {
 
-    private final ProductRepository repository;
+    private final ProductService service;
 
-    public ProductController(ProductRepository repository) {
-        this.repository = repository;
+    public ProductController(ProductService service) {
+        this.service = service;
     }
 
     @Override
     public ResponseEntity<List<Product>> getProducts() {
-        List<ProductEntity> entities = repository.findAll();
-        List<Product> products = entities.stream().map(this::mapToApi).collect(Collectors.toList());
+        List<Product> products = service.findAll().stream()
+                .map(this::mapToApi)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(products);
     }
 
     @Override
     public ResponseEntity<Void> createProduct(Product product) {
-        ProductEntity newEntity = new ProductEntity();
-        newEntity.setName(product.getName());
-        newEntity.setPrice(product.getPrice());
-        repository.save(newEntity);
+        service.create(product.getName(), product.getPrice());
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
     @Override
     public ResponseEntity<Product> getProduct(Long id) {
-        ProductEntity entity = repository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException(id));
-        return ResponseEntity.ok(mapToApi(entity));
+        return ResponseEntity.ok(mapToApi(service.findById(id)));
     }
 
     @Override
     public ResponseEntity<Void> updateProduct(Long id, Product product) {
-        ProductEntity entityToUpdate = repository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException(id));
-        entityToUpdate.setName(product.getName());
-        entityToUpdate.setPrice(product.getPrice());
-        repository.save(entityToUpdate);
+        service.update(id, product.getName(), product.getPrice());
         return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<Void> deleteProduct(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ProductNotFoundException(id);
-        }
-        repository.deleteById(id);
+        service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
